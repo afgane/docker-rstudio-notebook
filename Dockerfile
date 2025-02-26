@@ -2,8 +2,8 @@
 
 FROM rocker/rstudio:4.4
 
-ARG CONDA_VERSION=24.11.2
-ARG SUFFIX=1
+ARG CONDA_VERSION=25.1.1
+ARG SUFFIX=0
 ARG MINIFORGE_VERSION=${CONDA_VERSION}-${SUFFIX}
 ARG R_VERSION=4.4
 
@@ -46,6 +46,12 @@ RUN /opt/miniconda/bin/conda update -n base --yes conda \
 
 USER root
 
+# Fix for OpenSSL library version mismatch issue - use system curl instead of conda curl
+RUN apt-get update && apt-get install -y libssl3 libssl-dev && \
+    cp /opt/miniconda/lib/libcurl.so.4 /opt/miniconda/lib/libcurl.so.4.backup && \
+    ln -sf /usr/lib/x86_64-linux-gnu/libcurl.so.4 /opt/miniconda/lib/libcurl.so.4 && \
+    echo "rsession-which-r=/opt/miniconda/bin/R" >> /etc/rstudio/rserver.conf
+
 #COPY service-nginx-start /etc/services.d/nginx/run
 #COPY service-nginx-stop  /etc/services.d/nginx/finish
 #COPY proxy.conf          /etc/nginx/sites-enabled/default
@@ -83,5 +89,9 @@ RUN /opt/miniconda/bin/Rscript /tmp/packages/gx.R
 #COPY ./Rprofile.site /opt/miniconda/lib/R/etc/Rprofile.site
 
 COPY ./Rprofile.site /home/rstudio/.Rprofile
+
+# Create a startup hook to ensure the symlink persists across RStudio restarts
+RUN echo '#!/bin/bash\nif [ -f /opt/miniconda/lib/libcurl.so.4.backup ] && [ ! -L /opt/miniconda/lib/libcurl.so.4 ]; then\n  ln -sf /usr/lib/x86_64-linux-gnu/libcurl.so.4 /opt/miniconda/lib/libcurl.so.4\nfi' > /etc/profile.d/fix-curl.sh \
+    && chmod +x /etc/profile.d/fix-curl.sh
 
 EXPOSE 80
