@@ -90,8 +90,4 @@ RUN /opt/miniconda/bin/Rscript /tmp/packages/gx.R
 
 COPY ./Rprofile.site /home/rstudio/.Rprofile
 
-# Create a startup hook to ensure the symlink persists across RStudio restarts
-RUN echo '#!/bin/bash\nif [ -f /opt/miniconda/lib/libcurl.so.4.backup ] && [ ! -L /opt/miniconda/lib/libcurl.so.4 ]; then\n  ln -sf /usr/lib/x86_64-linux-gnu/libcurl.so.4 /opt/miniconda/lib/libcurl.so.4\nfi' > /etc/profile.d/fix-curl.sh \
-    && chmod +x /etc/profile.d/fix-curl.sh
-
 EXPOSE 80
