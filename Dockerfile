@@ -46,12 +46,6 @@ RUN /opt/miniconda/bin/conda update -n base --yes conda \
 
 USER root
 
-# Fix for OpenSSL library version mismatch issue - use system curl instead of conda curl
-RUN apt-get update && apt-get install -y libssl3 libssl-dev && \
-    cp /opt/miniconda/lib/libcurl.so.4 /opt/miniconda/lib/libcurl.so.4.backup && \
-    ln -sf /usr/lib/x86_64-linux-gnu/libcurl.so.4 /opt/miniconda/lib/libcurl.so.4 && \
-    echo "rsession-which-r=/opt/miniconda/bin/R" >> /etc/rstudio/rserver.conf
-
 #COPY service-nginx-start /etc/services.d/nginx/run
 #COPY service-nginx-stop  /etc/services.d/nginx/finish
 #COPY proxy.conf          /etc/nginx/sites-enabled/default
@@ -75,7 +69,9 @@ ADD ./packages/ /tmp/packages/
 ADD ./logging.conf /etc/rstudio/
 
 # The Galaxy instance can copy in data that needs to be present to the Rstudio webserver
-RUN chmod 777 /import/
+RUN chmod 777 /import/ \
+    # Fix for OpenSSL library version mismatch: use system curl instead of conda curl
+    && ln -sf /usr/lib/x86_64-linux-gnu/libcurl.so.4 /opt/miniconda/lib/libcurl.so.4
 
 # the symlinks should be removed once the R scripts for gx_get/gx_put are smart enough to take the global put/get
 RUN sed -i 's|/usr/local/bin/R|/opt/miniconda/bin/R|g' /etc/rstudio/disable_auth_rserver.conf \
